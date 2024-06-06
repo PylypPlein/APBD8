@@ -1,31 +1,38 @@
-﻿using APBD8.Models;
+﻿using APBD8.DTO;
+using APBD8.Models;
 using EfCodeFirst.Context;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace APBD8.Controller;
-
 [Route("api/[controller]")]
 [ApiController]
-public class DoctorsController : ControllerBase
-{
+public class DoctorsController : ControllerBase {
     private readonly AppDbContext _context;
 
     public DoctorsController(AppDbContext context)
     {
-        _context = context;
+            _context = context;
     }
 
     // GET: api/Doctors
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Doctor>>> GetDoctors()
+    public async Task<ActionResult<IEnumerable<DoctorDto>>> GetDoctors()
     {
-        return await _context.Doctors.ToListAsync();
+        return await _context.Doctors
+            .Select(d => new DoctorDto
+            {
+                IdDoctor = d.IdDoctor,
+                FirstName = d.FirstName,
+                LastName = d.LastName,
+                Email = d.Email
+            })
+            .ToListAsync();
     }
 
     // GET: api/Doctors/5
     [HttpGet("{id}")]
-    public async Task<ActionResult<Doctor>> GetDoctor(int id)
+    public async Task<ActionResult<DoctorDto>> GetDoctor(int id)
     {
         var doctor = await _context.Doctors.FindAsync(id);
 
@@ -34,27 +41,56 @@ public class DoctorsController : ControllerBase
             return NotFound();
         }
 
-        return doctor;
+        var doctorDto = new DoctorDto
+        {
+            IdDoctor = doctor.IdDoctor,
+            FirstName = doctor.FirstName,
+            LastName = doctor.LastName,
+            Email = doctor.Email
+        };
+
+        return doctorDto;
     }
 
-    // POST: api/Doctors
+        // POST: api/Doctors
     [HttpPost]
-    public async Task<ActionResult<Doctor>> PostDoctor(Doctor doctor)
+    public async Task<ActionResult<DoctorDto>> PostDoctor(CreateDoctorDto createDoctorDto)
     {
+        var doctor = new Doctor
+        {
+            FirstName = createDoctorDto.FirstName,
+            LastName = createDoctorDto.LastName,
+            Email = createDoctorDto.Email
+        };
+
         _context.Doctors.Add(doctor);
         await _context.SaveChangesAsync();
 
-        return CreatedAtAction(nameof(GetDoctor), new { id = doctor.IdDoctor }, doctor);
+        var doctorDto = new DoctorDto
+        {
+            IdDoctor = doctor.IdDoctor,
+            FirstName = doctor.FirstName,
+            LastName = doctor.LastName,
+            Email = doctor.Email
+        };
+
+        return CreatedAtAction(nameof(GetDoctor), new { id = doctorDto.IdDoctor }, doctorDto);
     }
 
     // PUT: api/Doctors/5
     [HttpPut("{id}")]
-    public async Task<IActionResult> PutDoctor(int id, Doctor doctor)
+    public async Task<IActionResult> PutDoctor(int id, UpdateDoctorDto updateDoctorDto)
     {
-        if (id != doctor.IdDoctor)
+        var doctor = await _context.Doctors.FindAsync(id);
+
+        if (doctor == null)
         {
-            return BadRequest();
+            return NotFound();
         }
+
+        doctor.FirstName = updateDoctorDto.FirstName;
+        doctor.LastName = updateDoctorDto.LastName;
+        doctor.Email = updateDoctorDto.Email;
 
         _context.Entry(doctor).State = EntityState.Modified;
 
@@ -70,7 +106,7 @@ public class DoctorsController : ControllerBase
             }
             else
             {
-                throw;
+                    throw;
             }
         }
 
